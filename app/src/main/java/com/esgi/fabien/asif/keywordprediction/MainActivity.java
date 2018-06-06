@@ -9,9 +9,16 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.Toast;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.opencsv.CSVReader;
 
 import org.apache.commons.collections.MultiMap;
@@ -20,13 +27,17 @@ import org.apache.commons.collections.map.MultiValueMap;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
     private EditText editText;
-    private MultiMap oneGramMap = null;
+    private ListMultimap oneGramMapList = null;
+    private ListView listView;
+    private List<String> suggestions = new ArrayList<>();
+    private ArrayAdapter<String> suggestionAdapter;
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -36,12 +47,39 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         editText = findViewById(R.id.editText);
+        listView = findViewById(R.id.list_view);
 
-        oneGramMap = getSuggestionListFromCSV("oneGramSuggestion.csv");
+        suggestionAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, suggestions);
+        listView.setAdapter(suggestionAdapter);
 
-        if (oneGramMap != null) {
-            Log.i(TAG, "Prediction for 'je' : " + oneGramMap.get("je"));
+        oneGramMapList = getSuggestionListFromCSV("oneGramSuggestion.csv");
+
+        if (oneGramMapList != null) {
+
+            suggestions.addAll(oneGramMapList.get("je"));
+            suggestionAdapter.notifyDataSetChanged();
+            Log.i(TAG, "Prediction for 'je' : " + suggestions);
+
         }
+
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+
+                if (suggestions != null) {
+
+                    String editTextString = editText.getText().toString();
+
+                    if(!editTextString.isEmpty()){
+                        editText.append(" ");
+                    }
+
+                    String clickedItem = suggestions.get(position);
+                    editText.append(clickedItem);
+                }
+
+            }
+        });
 
         editText.addTextChangedListener(new TextWatcher() {
 
@@ -57,20 +95,22 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void afterTextChanged(Editable s) {
-                if (oneGramMap != null) {
+                if (oneGramMapList != null) {
 
-                    String typedText = s.toString();
+                    //String typedText = s.toString();
 
-                    /*String[] arraySuggestion = (String[]) oneGramMap.get(typedText);
+                    //suggestions = oneGramMapList.get(typedText);
 
-                    Log.i(TAG, "Prediction for " + typedText + " : " + arraySuggestion);*/
+
+
+                   // Log.i(TAG, "Prediction for " + typedText + " : " + arraySuggestion);
                 }
             }
         });
 
     }
 
-    private MultiMap getSuggestionListFromCSV(String csvFileName) {
+    private ListMultimap getSuggestionListFromCSV(String csvFileName) {
 
         if (checkReafPermission()) {
 
@@ -86,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
                     reader = new CSVReader(new FileReader(filePath));
                     String[] nextLine;
 
-                    MultiMap multiMap = new MultiValueMap();
+                    ListMultimap<String, String> multiMap = ArrayListMultimap.create();
 
                     while ((nextLine = reader.readNext()) != null) {
 
@@ -166,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String getFilePath(String fileName) {
         return Environment.
-                getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS + "/" + fileName).getPath();
+                getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + "/" + fileName).getPath();
     }
 
     private boolean isFileReadable(String filePath) {
