@@ -2,17 +2,16 @@ package com.esgi.fabien.asif.keywordprediction;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -21,23 +20,25 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.opencsv.CSVReader;
 
-import org.apache.commons.collections.MultiMap;
-import org.apache.commons.collections.map.MultiValueMap;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
     private EditText editText;
-    private ListMultimap oneGramMapList = null;
+    private static ListMultimap<String, String> suggestionMapList = ArrayListMultimap.create();
     private ListView listView;
     private List<String> suggestions = new ArrayList<>();
     private ArrayAdapter<String> suggestionAdapter;
+
+    private static final int GRAM_0 = 0;
+    private static final int GRAM_1 = 1;
+    private static final int GRAM_2 = 2;
+
+    private static final int MAX_SUGGETIONS = 3;
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -52,14 +53,28 @@ public class MainActivity extends AppCompatActivity {
         suggestionAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, suggestions);
         listView.setAdapter(suggestionAdapter);
 
-        oneGramMapList = getSuggestionListFromCSV("oneGramSuggestion.csv");
+        // csv to memory
+        ListMultimap<String, String> zeroGramSuggestions = getSuggestionListFromCSV(GRAM_0, "zeroGram.csv");
 
-        if (oneGramMapList != null) {
+        if (zeroGramSuggestions != null) {
+            suggestionMapList.putAll(zeroGramSuggestions);
+        }
 
-            suggestions.addAll(oneGramMapList.get("je"));
-            suggestionAdapter.notifyDataSetChanged();
-            Log.i(TAG, "Prediction for 'je' : " + suggestions);
+        ListMultimap<String, String> oneGramSuggestions = getSuggestionListFromCSV(GRAM_1, "oneGram.csv");
 
+        if (oneGramSuggestions != null) {
+            suggestionMapList.putAll(oneGramSuggestions);
+        }
+
+        ListMultimap<String, String> twoGramSuggestions = getSuggestionListFromCSV(GRAM_2, "twoGram.csv");
+
+        if (twoGramSuggestions != null) {
+            suggestionMapList.putAll(twoGramSuggestions);
+        }
+
+        // suggestion for empty value
+        if (suggestionMapList != null) {
+            showSuggestions(getTextSuggestions(" "));
         }
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -70,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
 
                     String editTextString = editText.getText().toString();
 
-                    if(!editTextString.isEmpty()){
+                    if (!editTextString.isEmpty()) {
                         editText.append(" ");
                     }
 
@@ -95,22 +110,25 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void afterTextChanged(Editable s) {
-                if (oneGramMapList != null) {
 
-                    //String typedText = s.toString();
+                String userEntry = s.toString().trim();
 
-                    //suggestions = oneGramMapList.get(typedText);
+                if (suggestionMapList != null) {
 
+                    if (userEntry.isEmpty()) {
+                        showSuggestions(getTextSuggestions(" "));
+                    } else {
+                        showSuggestions(getTextSuggestions(userEntry));
+                    }
 
-
-                   // Log.i(TAG, "Prediction for " + typedText + " : " + arraySuggestion);
                 }
+
             }
         });
 
     }
 
-    private ListMultimap getSuggestionListFromCSV(String csvFileName) {
+    private ListMultimap getSuggestionListFromCSV(int gramType, String csvFileName) {
 
         if (checkReafPermission()) {
 
@@ -123,18 +141,30 @@ public class MainActivity extends AppCompatActivity {
                 CSVReader reader = null;
 
                 try {
-                    reader = new CSVReader(new FileReader(filePath));
+                    reader = new CSVReader(new FileReader(filePath), ';');
                     String[] nextLine;
 
                     ListMultimap<String, String> multiMap = ArrayListMultimap.create();
 
+                    String key = " ";
+                    String value = " ";
+
                     while ((nextLine = reader.readNext()) != null) {
 
-                        String key = nextLine[0];
-                        String value = nextLine[1];
-                        int occurrence = Integer.parseInt(nextLine[2]);
+                        if (gramType == GRAM_0) {
+                            key = " ";
+                            value = nextLine[0];
+                        }
 
-                        Log.i(TAG, "key : " + key + ", value : " + value + ", occurrence : " + occurrence);
+                        if (gramType == GRAM_1) {
+                            key = nextLine[0];
+                            value = nextLine[1];
+                        }
+
+                        if (gramType == GRAM_2){
+                            key = nextLine[0] + " " + nextLine[1];
+                            value = nextLine[2];
+                        }
 
                         multiMap.put(key, value);
                     }
@@ -157,56 +187,28 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    /*private MultiMap getSuggestionMapListFromCSV(String csvFileName) {
+    private List<String> getTextSuggestions(String word) {
 
-        if (checkReafPermission()) {
+        List<String> suggestionStrings = suggestionMapList.get(word);
 
-            String filePath = getFilePath(csvFileName);
+        /*if (suggestionStrings != null) {
+            return suggestionStrings.subList(0, MAX_SUGGETIONS);
+        }*/
 
-            Log.i(TAG, "File path : " + filePath);
+        return suggestionStrings;
+    }
 
-            if (isFileReadable(filePath)) {
-
-                CSVReader reader = null;
-
-                try {
-                    reader = new CSVReader(new FileReader(filePath));
-                    String[] nextLine;
-
-
-
-                    while ((nextLine = reader.readNext()) != null) {
-
-                        String key = nextLine[0];
-                        String value = nextLine[1];
-                        String occurrence = nextLine[2];
-
-                        Log.i(TAG, "key : " + key + ", value : " + value + ", occurrence : " + occurrence);
-
-
-                    }
-
-                    return multiMap;
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            } else {
-                Toast.makeText(getBaseContext(), "File read error", Toast.LENGTH_SHORT).show();
-            }
-
-        } else {
-            Toast.makeText(getBaseContext(), "Allow storage read permission", Toast.LENGTH_SHORT).show();
+    private void showSuggestions(List<String> foundSuggestions) {
+        if (foundSuggestions != null) {
+            suggestions.clear();
+            suggestions.addAll(foundSuggestions);
+            suggestionAdapter.notifyDataSetChanged();
         }
-
-        return null;
-
-    }*/
+    }
 
     private String getFilePath(String fileName) {
         return Environment.
-                getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + "/" + fileName).getPath();
+                getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS + "/" + fileName).getPath();
     }
 
     private boolean isFileReadable(String filePath) {
