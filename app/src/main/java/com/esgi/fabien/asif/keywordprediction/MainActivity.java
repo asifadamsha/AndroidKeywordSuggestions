@@ -4,6 +4,8 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
@@ -17,6 +19,7 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ListMultimap;
 import com.opencsv.CSVReader;
 
@@ -40,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int GRAM_3 = 3;
     private static final int GRAM_4 = 4;
 
-    private static final int MAX_SUGGETIONS = 3;
+    private static final int MAX_SUGGETIONS = 5;
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -55,42 +58,7 @@ public class MainActivity extends AppCompatActivity {
         suggestionAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, suggestions);
         listView.setAdapter(suggestionAdapter);
 
-        // csv to memory
-        ListMultimap<String, String> zeroGramSuggestions = getSuggestionListFromCSV(GRAM_0, "zeroGram.csv");
-
-        if (zeroGramSuggestions != null) {
-            suggestionMapList.putAll(zeroGramSuggestions);
-        }
-
-        ListMultimap<String, String> oneGramSuggestions = getSuggestionListFromCSV(GRAM_1, "oneGram.csv");
-
-        if (oneGramSuggestions != null) {
-            suggestionMapList.putAll(oneGramSuggestions);
-        }
-
-        ListMultimap<String, String> twoGramSuggestions = getSuggestionListFromCSV(GRAM_2, "twoGram.csv");
-
-        if (twoGramSuggestions != null) {
-            suggestionMapList.putAll(twoGramSuggestions);
-        }
-
-        ListMultimap<String, String> threeGramSuggestions = getSuggestionListFromCSV(GRAM_3, "threeGram.csv");
-
-        if (threeGramSuggestions != null) {
-            suggestionMapList.putAll(threeGramSuggestions);
-        }
-
-        ListMultimap<String, String> fourGramSuggestions = getSuggestionListFromCSV(GRAM_4, "fourGram.csv");
-
-        if (fourGramSuggestions != null) {
-            suggestionMapList.putAll(fourGramSuggestions);
-        }
-
-        // suggestion for empty value
-        if (suggestionMapList != null) {
-            Log.i(TAG, "suggestionMapList : " + suggestionMapList);
-            showSuggestions(getTextSuggestions(" "));
-        }
+        initialteData();
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -115,8 +83,6 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence sequence, int start, int before, int count) {
-                //Log.i(TAG, "onTextChanged : " + sequence);
-
             }
 
             @Override
@@ -205,22 +171,63 @@ public class MainActivity extends AppCompatActivity {
             }
 
         } else {
-            Toast.makeText(getBaseContext(), "Allow storage read permission", Toast.LENGTH_SHORT).show();
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    1);
         }
 
         return null;
 
     }
 
+    private void initialteData() {
+
+        initiateSuggestionMap();
+
+        // suggestion for empty value
+        if (suggestionMapList != null) {
+            Log.i(TAG, "suggestionMapList : " + suggestionMapList);
+            showSuggestions(getTextSuggestions(" "));
+        }
+    }
+
+    private void initiateSuggestionMap() {
+
+        // csv to memory
+        ListMultimap<String, String> zeroGramSuggestions = getSuggestionListFromCSV(GRAM_0, "zeroGram.csv");
+
+        if (zeroGramSuggestions != null) {
+            suggestionMapList.putAll(zeroGramSuggestions);
+        }
+
+        ListMultimap<String, String> oneGramSuggestions = getSuggestionListFromCSV(GRAM_1, "oneGram.csv");
+
+        if (oneGramSuggestions != null) {
+            suggestionMapList.putAll(oneGramSuggestions);
+        }
+
+        ListMultimap<String, String> twoGramSuggestions = getSuggestionListFromCSV(GRAM_2, "twoGram.csv");
+
+        if (twoGramSuggestions != null) {
+            suggestionMapList.putAll(twoGramSuggestions);
+        }
+
+        ListMultimap<String, String> threeGramSuggestions = getSuggestionListFromCSV(GRAM_3, "threeGram.csv");
+
+        if (threeGramSuggestions != null) {
+            suggestionMapList.putAll(threeGramSuggestions);
+        }
+
+        ListMultimap<String, String> fourGramSuggestions = getSuggestionListFromCSV(GRAM_4, "fourGram.csv");
+
+        if (fourGramSuggestions != null) {
+            suggestionMapList.putAll(fourGramSuggestions);
+        }
+    }
+
     private List<String> getTextSuggestions(String word) {
-
         List<String> suggestionStrings = suggestionMapList.get(word);
-
-        /*if (suggestionStrings != null) {
-            return suggestionStrings.subList(0, MAX_SUGGETIONS);
-        }*/
-
-        return suggestionStrings;
+        return FluentIterable.from(suggestionStrings).limit(MAX_SUGGETIONS).toList();
     }
 
     private void showSuggestions(List<String> foundSuggestions) {
@@ -243,5 +250,22 @@ public class MainActivity extends AppCompatActivity {
     private boolean checkReafPermission() {
         int result = ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE);
         return result == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+
+        switch (requestCode) {
+
+            case 1: {
+
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    initialteData();
+
+                }
+            }
+        }
     }
 }
