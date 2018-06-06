@@ -37,6 +37,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int GRAM_0 = 0;
     private static final int GRAM_1 = 1;
     private static final int GRAM_2 = 2;
+    private static final int GRAM_3 = 3;
+    private static final int GRAM_4 = 4;
 
     private static final int MAX_SUGGETIONS = 3;
 
@@ -72,8 +74,21 @@ public class MainActivity extends AppCompatActivity {
             suggestionMapList.putAll(twoGramSuggestions);
         }
 
+        ListMultimap<String, String> threeGramSuggestions = getSuggestionListFromCSV(GRAM_3, "threeGram.csv");
+
+        if (threeGramSuggestions != null) {
+            suggestionMapList.putAll(threeGramSuggestions);
+        }
+
+        ListMultimap<String, String> fourGramSuggestions = getSuggestionListFromCSV(GRAM_4, "fourGram.csv");
+
+        if (fourGramSuggestions != null) {
+            suggestionMapList.putAll(fourGramSuggestions);
+        }
+
         // suggestion for empty value
         if (suggestionMapList != null) {
+            Log.i(TAG, "suggestionMapList : " + suggestionMapList);
             showSuggestions(getTextSuggestions(" "));
         }
 
@@ -161,9 +176,19 @@ public class MainActivity extends AppCompatActivity {
                             value = nextLine[1];
                         }
 
-                        if (gramType == GRAM_2){
+                        if (gramType == GRAM_2) {
                             key = nextLine[0] + " " + nextLine[1];
                             value = nextLine[2];
+                        }
+
+                        if (gramType == GRAM_3) {
+                            key = nextLine[0] + " " + nextLine[1] + " " + nextLine[2];
+                            value = nextLine[3];
+                        }
+
+                        if (gramType == GRAM_4) {
+                            key = nextLine[0] + " " + nextLine[1] + " " + nextLine[2] + " " + nextLine[3];
+                            value = nextLine[4];
                         }
 
                         multiMap.put(key, value);
