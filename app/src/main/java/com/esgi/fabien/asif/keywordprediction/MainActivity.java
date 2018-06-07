@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText editText;
     private ImageView imageViewAdd;
     private static ListMultimap<String, String> suggestionMapList = ArrayListMultimap.create();
-    private static ListMultimap<String, String> userSuggestionMapList = ArrayListMultimap.create();
+    private static List<String> commonSuggestionList = new ArrayList<>();
     private ListView listView;
     private List<String> suggestions = new ArrayList<>();
     private ArrayAdapter<String> suggestionAdapter;
@@ -64,6 +64,12 @@ public class MainActivity extends AppCompatActivity {
 
         suggestionAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, suggestions);
         listView.setAdapter(suggestionAdapter);
+
+        commonSuggestionList.add(":)");
+        commonSuggestionList.add("...");
+        commonSuggestionList.add(",");
+        commonSuggestionList.add("!");
+        commonSuggestionList.add("?");
 
         initialteData();
 
@@ -262,10 +268,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (suggestionStrings.size() <= 0) {
             Log.i(TAG, "No suggestion found");
-            imageViewAdd.setVisibility(View.VISIBLE);
-            userEnteredWord = word;
-        } else {
-            imageViewAdd.setVisibility(View.GONE);
+            return commonSuggestionList;
         }
 
         return suggestionStrings;
@@ -281,7 +284,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String getFilePath(String fileName) {
         return Environment.
-                getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + "/" + fileName).getPath();
+                getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS + "/" + fileName).getPath();
     }
 
     private boolean isFileReadable(String filePath) {
