@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int GRAM_3 = 3;
     private static final int GRAM_4 = 4;
 
-    private static final int MAX_SUGGETIONS = 5;
+    private static final int MAX_SUGGETIONS = 11;
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -107,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
 
                 if (suggestionMapList != null) {
 
-                    String userEntry = s.toString().trim();
+                    String userEntry = s.toString().trim().toLowerCase();
 
                     if (userEntry.isEmpty()) {
 
