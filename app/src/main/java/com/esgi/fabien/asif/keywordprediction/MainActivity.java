@@ -15,6 +15,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -26,16 +27,21 @@ import com.opencsv.CSVReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     private EditText editText;
+    private ImageView imageViewAdd;
     private static ListMultimap<String, String> suggestionMapList = ArrayListMultimap.create();
+    private static ListMultimap<String, String> userSuggestionMapList = ArrayListMultimap.create();
     private ListView listView;
     private List<String> suggestions = new ArrayList<>();
     private ArrayAdapter<String> suggestionAdapter;
+    private String userEnteredWord = "";
 
     private static final int GRAM_0 = 0;
     private static final int GRAM_1 = 1;
@@ -54,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
 
         editText = findViewById(R.id.editText);
         listView = findViewById(R.id.list_view);
+        imageViewAdd = findViewById(R.id.imageViewAdd);
 
         suggestionAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, suggestions);
         listView.setAdapter(suggestionAdapter);
@@ -92,26 +99,50 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void afterTextChanged(Editable s) {
 
-                String userEntry = s.toString().trim();
-
                 if (suggestionMapList != null) {
 
+                    String userEntry = s.toString().trim();
+
                     if (userEntry.isEmpty()) {
+
                         showSuggestions(getTextSuggestions(" "));
+
                     } else {
-                        showSuggestions(getTextSuggestions(userEntry));
+
+                        String[] userEntryDotSplit = userEntry.split("\\.", -1);
+
+                        int splitSize = userEntryDotSplit.length;
+
+                        Log.i(TAG, "userTextSplit - " + splitSize + " : " + Arrays.toString(userEntryDotSplit));
+
+                        if (splitSize <= 0) {
+
+                            showSuggestions(getTextSuggestions(userEntry));
+
+                        } else {
+
+                            String lastTextPart = userEntryDotSplit[splitSize - 1].trim();
+
+                            Log.i(TAG, "lastTextUser : " + lastTextPart);
+
+                            if (lastTextPart.isEmpty()) {
+                                showSuggestions(getTextSuggestions(" "));
+                            } else {
+                                showSuggestions(getTextSuggestions(lastTextPart));
+                            }
+                        }
+
                     }
 
                 }
 
             }
         });
-
     }
 
     private ListMultimap getSuggestionListFromCSV(int gramType, String csvFileName) {
 
-        if (checkReafPermission()) {
+        if (checkReadPermission()) {
 
             String filePath = getFilePath(csvFileName);
 
@@ -227,7 +258,17 @@ public class MainActivity extends AppCompatActivity {
 
     private List<String> getTextSuggestions(String word) {
         List<String> suggestionStrings = suggestionMapList.get(word);
-        return FluentIterable.from(suggestionStrings).limit(MAX_SUGGETIONS).toList();
+        suggestionStrings = FluentIterable.from(suggestionStrings).limit(MAX_SUGGETIONS).toList();
+
+        if (suggestionStrings.size() <= 0) {
+            Log.i(TAG, "No suggestion found");
+            imageViewAdd.setVisibility(View.VISIBLE);
+            userEnteredWord = word;
+        } else {
+            imageViewAdd.setVisibility(View.GONE);
+        }
+
+        return suggestionStrings;
     }
 
     private void showSuggestions(List<String> foundSuggestions) {
@@ -240,14 +281,14 @@ public class MainActivity extends AppCompatActivity {
 
     private String getFilePath(String fileName) {
         return Environment.
-                getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS + "/" + fileName).getPath();
+                getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + "/" + fileName).getPath();
     }
 
     private boolean isFileReadable(String filePath) {
         return new File(filePath).canRead();
     }
 
-    private boolean checkReafPermission() {
+    private boolean checkReadPermission() {
         int result = ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE);
         return result == PackageManager.PERMISSION_GRANTED;
     }
